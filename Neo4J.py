@@ -1,48 +1,52 @@
-from neo4j import GraphDatabase
-import pandas as pd
+# from neo4j import GraphDatabase
+# import pandas as pd
 
-class Neo4J:
-    def __init__(self, uri="bolt://localhost:7687", user="neo4j", password="fabi1020"):
-        self.driver = GraphDatabase.driver(uri, auth=(user, password))
-        self.session = self.driver.session()
+# class Neo4J:
+#     def __init__(self, uri="bolt://localhost:7687", user="neo4j", password="fabi1020"):
+#         self.driver = GraphDatabase.driver(uri, auth=(user, password))
 
-    def cleanDatabase(self):
-        cypher_query = """
-        MATCH (n)
-        DETACH DELETE n
-        """
-        self.session.run(cypher_query)
+#     def cleanDatabase(self):
+#         with self.driver.session() as session:
+#             session.run("MATCH (n) DETACH DELETE n")
+#         print("Neo4j database cleaned.")
+#     def escape_apostrophes(self, name):
+#         return name.replace("'", "\\'")
 
-    # from MongoDB to Neo4j
-    def importNodes(self, nodes_collection):
-        #finds node
-        compound_nodes = list(nodes_collection.find({"kind": "Compound"}))
-        disease_nodes = list(nodes_collection.find({"kind": "Disease"}))
-        anatomy_nodes = list(nodes_collection.find({"kind": "Anatomy"}))
-        gene_nodes = list(nodes_collection.find({"kind": "Gene"}))
-    
-        #load nodes into Neo4J
-        if compound_nodes:
-            for node in compound_nodes:
-                cypher_query = f"""
-                MERGE (n:Compound {{id: '{node['_id']}', name: '{node['name']}', kind: '{node['kind']}'}})
-                """
-        if disease_nodes:
-            for node in disease_nodes:
-                cypher_query = f"""
-                MERGE (n:Disease {{id: '{node['_id']}', name: '{node['name']}', kind: '{node['kind']}'}})
-                """
-        if anatomy_nodes:
-            for node in anatomy_nodes:
-                cypher_query = f"""
-                MERGE (n:Anatomy {{id: '{node['_id']}', name: '{node['name']}', kind: '{node['kind']}'}})
-                """
-        if gene_nodes:
-            for node in gene_nodes:
-                cypher_query = f"""
-                MERGE (n:Gene {{id: '{node['_id']}', name: '{node['name']}', kind: '{node['kind']}'}})
-                """
- 
-    def close(self):
-        self.session.close()
-        print("Neo4j session closed")
+
+#     def importNodes(self, nodes_collection):
+#         with self.driver.session() as session:
+#             for node in nodes_collection.find():
+#                 node_id = node['_id']
+#                 name = self.escape_apostrophes(node['name'])  # Escape apostrophes
+#                 kind = node['kind']
+
+#                 cypher_query = f"""
+#                 MERGE (n:{kind} {{id: '{node_id}', name: '{name}'}})
+#                 """
+#                 try:
+#                     session.run(cypher_query)
+#                 except Exception as e:
+#                     print(f"Error inserting {kind} node {node_id}: {e}")
+
+#     def loadEdges(self, edge_file='edges.tsv'):
+#         edges_df = pd.read_csv(edge_file, sep='\t')
+#         with self.driver.session() as session:
+#             for _, row in edges_df.iterrows():
+#                 source = row['source']
+#                 metaedge = row['metaedge']
+#                 target = row['target']
+
+#                 cypher_query = f"""
+#                 MATCH (source {{id: '{source}'}}), (target {{id: '{target}'}})
+#                 MERGE (source)-[:{metaedge}]->(target)
+#                 """
+#                 try:
+#                     session.run(cypher_query)
+#                 except Exception as e:
+#                     print(f"Error creating edge {source} -> {target}: {e}")
+
+#         print("Edges successfully loaded into Neo4j.")
+
+#     def close(self):
+#         self.driver.close()
+#         print("Neo4j connection closed.")
