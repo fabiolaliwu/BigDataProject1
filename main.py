@@ -11,7 +11,7 @@ if __name__ == "__main__":
     mongo_db = mongo_client['hetio_database']
     nodes_collection = mongo_db['nodes'] 
     testingNeo4J.cleanDatabase()
-    # testingNeo4J.importNodes(nodes_collection)
+    
    
 
     print("Done")
