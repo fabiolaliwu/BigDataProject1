@@ -13,8 +13,8 @@ class MongoDB:
         self.db.edges.drop()
         print("database cleaned")
 
-    def loadNodes(self, node_file='nodes.tsv'):
-        nodes_df = pd.read_csv(node_file, sep='\t')
+    def loadNodes(self, nodeFile='nodes.tsv'):
+        nodes_df = pd.read_csv(nodeFile, sep='\t')
         nodes_data = nodes_df.to_dict(orient='records')
         compoundList = []
         diseaseList = []
@@ -46,3 +46,14 @@ class MongoDB:
         #     print(f"{len(nodes_data)} nodes loaded into MongoDB")
         # else:
         #     print("No data to insert.")
+
+    def loadEdges(self, edgeFile = 'edges.tsv'):
+        edges_df = pd.read_csv(edgeFile, sep='\t')
+        edges_data = edges_df.to_dict(orient='records')
+
+        if edges_data:
+            self.edges_collection.insert_many(edges_data)
+            # testing purposes
+            print(f"{len(edges_data)} nodes loaded into MongoDB")
+        else:
+            print("No data to insert.")
