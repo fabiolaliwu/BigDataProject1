@@ -15,16 +15,3 @@ class Neo4J:
             session.run("MATCH (n) DETACH DELETE n")
         print("Neo4j cleaned")
 
-
-    # def loadNodes(self, node_file='nodes.tsv'):
-    #     nodes_df = pd.read_csv(node_file, sep='\t')
-
-    #     with self.driver.session() as session:
-    #         for _, row in nodes_df.iterrows():
-    #             session.run(
-    #                 """
-    #                 MERGE (n:Node {id: $id, name: $name, kind: $kind})
-    #                 """,
-    #                 id=row["id"], name=row["name"], kind=row["kind"]
-    #             )
-    #     print(f"{len(nodes_df)} nodes loaded into Neo4j")
