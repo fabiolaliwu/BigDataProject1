@@ -15,6 +15,7 @@ class MongoDB:
 
     def loadNodes(self, nodeFile='nodes.tsv'):
         nodes_df = pd.read_csv(nodeFile, sep='\t')
+        nodes_df.rename(columns={'id': '_id'}, inplace=True)
         nodes_data = nodes_df.to_dict(orient='records')
         compoundList = []
         diseaseList = []
@@ -54,6 +55,94 @@ class MongoDB:
         if edges_data:
             self.edges_collection.insert_many(edges_data)
             # testing purposes
-            print(f"{len(edges_data)} nodes loaded into MongoDB")
+            print(f"{len(edges_data)} edges loaded into MongoDB")
         else:
             print("No data to insert.")
+
+   
+    def diseaseInfo(self, diseaseID):
+        info = [
+            {"$match": {"_id": diseaseID}}, 
+            {
+                "$lookup": {
+                    "from": "edges",
+                    "localField": "_id",
+                    "foreignField": "target",
+                    "as": "foundEdge"
+                }
+            },
+            {
+                "$unwind": {
+                    "path": "$foundEdge",
+                    "preserveNullAndEmptyArrays": True
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "nodes",
+                    "localField": "foundEdge.source",
+                    "foreignField": "_id",
+                    "as": "related_nodes"
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$_id",
+                    "Name": {"$first": "$name"},
+                    "Treating drugs": {
+                        "$addToSet": {
+                            "$cond": [
+                                {"$in": ["$foundEdge.metaedge", ["CtD"]]},
+                                "$related_nodes.name",
+                                None
+                            ]
+                        }
+                    },
+                    "Palliating drugs": {
+                        "$addToSet": {
+                            "$cond": [
+                                {"$in": ["$foundEdge.metaedge", ["CpD"]]},
+                                "$related_nodes.name",
+                                None
+                            ]
+                        }
+                    },
+                    "genes": {
+                        "$addToSet": {
+                            "$cond": [
+                                {"$eq": ["$foundEdge.metaedge", "DdG"]},
+                                "$related_nodes.name",
+                                None
+                            ]
+                        }
+                    },
+                    "anatomy": {
+                        "$addToSet": {
+                            "$cond": [
+                                {"$eq": ["$foundEdge.metaedge", "DlA"]},
+                                "$related_nodes.name",
+                                None
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "ID": "$_id",
+                    "Name": 1,
+                    "Treating drugs": {"$filter": {"input": "$Treating drugs", "as": "item", "cond": {"$ne": ["$$item", None]}}},
+                    "Palliading drugs": {"$filter": {"input": "$Palliating drugs", "as": "item", "cond": {"$ne": ["$$item", None]}}},
+                    "Genes": {"$filter": {"input": "$genes", "as": "item", "cond": {"$ne": ["$$item", None]}}},
+                    "Anatomy": {"$filter": {"input": "$anatomy", "as": "item", "cond": {"$ne": ["$$item", None]}}}
+                }
+            }
+        ]
+        
+        result = list(self.nodes_collection.aggregate(info))
+        print(result)
+        # return result if result else f"No data found for disease ID {diseaseID}"
+    
+
+
