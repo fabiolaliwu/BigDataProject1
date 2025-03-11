@@ -14,4 +14,5 @@ class Neo4J:
         with self.driver.session() as session:
             session.run("MATCH (n) DETACH DELETE n")
         print("Neo4j cleaned")
+        
 
