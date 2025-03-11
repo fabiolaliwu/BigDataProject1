@@ -142,7 +142,6 @@ class MongoDB:
         
         result = list(self.nodes_collection.aggregate(info))
         print(result)
-        # return result if result else f"No data found for disease ID {diseaseID}"
-    
+       
 
 

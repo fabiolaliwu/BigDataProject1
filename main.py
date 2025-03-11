@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # mongo_db = mongo_client['hetio_database']
     # nodes_collection = mongo_db['nodes'] 
 
-    disease_id = "Disease::DOID:0050156"
+    disease_id = "Disease::DOID:1094"
     testingMongoDB.diseaseInfo(disease_id)
 
 
