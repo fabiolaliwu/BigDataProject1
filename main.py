@@ -1,5 +1,4 @@
 from MongoDB import MongoDB
-from Neo4J import Neo4J
 
 if __name__ == "__main__":
     testingMongoDB = MongoDB()
