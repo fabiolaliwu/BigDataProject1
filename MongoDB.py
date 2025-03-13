@@ -139,7 +139,6 @@ class MongoDB:
                 }
             }
         ]
-        
         result = list(self.nodes_collection.aggregate(info))
         print(result)
        
