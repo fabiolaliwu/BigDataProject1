@@ -99,7 +99,7 @@ class MongoDB:
                         }
                     },
                     "Palliating drugs": {
-                        "$addToSet": {
+                        "$push": {
                             "$cond": [
                                 {"$in": ["$foundEdge.metaedge", ["CpD"]]},
                                 "$related_nodes.name",
@@ -133,14 +133,25 @@ class MongoDB:
                     "ID": "$_id",
                     "Name": 1,
                     "Treating drugs": {"$filter": {"input": "$Treating drugs", "as": "item", "cond": {"$ne": ["$$item", None]}}},
-                    "Palliading drugs": {"$filter": {"input": "$Palliating drugs", "as": "item", "cond": {"$ne": ["$$item", None]}}},
+                    "Palliating drugs": {"$filter": {"input": "$Palliating drugs", "as": "item", "cond": {"$ne": ["$$item", None]}}},
                     "Genes": {"$filter": {"input": "$genes", "as": "item", "cond": {"$ne": ["$$item", None]}}},
                     "Anatomy": {"$filter": {"input": "$anatomy", "as": "item", "cond": {"$ne": ["$$item", None]}}}
                 }
             }
         ]
         result = list(self.nodes_collection.aggregate(info))
-        print(result)
+        #print(result)
+        if(result):
+            disease = result[0]
+            print(f"Name: {disease['Name']}")
+            print(f"Treating Drugs: {disease['Treating drugs']}")
+            palliating_drugs = [drug for sublist in disease['Palliating drugs'] for drug in sublist]
+            print(f"Palliating Drugs: {', '.join(palliating_drugs) if palliating_drugs else ' '}")
+            print(f"Genes: {disease['Genes']}")
+            print(f"Anatomy: {disease['Anatomy']}")
+        
+    def findMissingEdges(self):
+        print("this is he finding missing edges funciton")
        
 
 

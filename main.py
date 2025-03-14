@@ -1,4 +1,5 @@
 from MongoDB import MongoDB
+# from Neo4J import Neo4J
 
 if __name__ == "__main__":
     testingMongoDB = MongoDB()
@@ -13,12 +14,13 @@ if __name__ == "__main__":
 
     disease_id = "Disease::DOID:1094"
     testingMongoDB.diseaseInfo(disease_id)
+    testingMongoDB.findMissingEdges()
 
 
     # testingNeo4J = Neo4J()
     # testingNeo4J.cleanDatabase()
     
-    print("Done")
+
 
 
 
