@@ -151,7 +151,11 @@ class MongoDB:
             print(f"Anatomy: {disease['Anatomy']}")
         
     def findMissingEdges(self):
-        print("this is he finding missing edges funciton")
-       
+        pipeline = [
+        
 
+        ]
+        result = list(self.edges_collection.aggregate(pipeline))
+        # print(result)
 
+   
