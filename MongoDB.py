@@ -7,59 +7,29 @@ class MongoDB:
         self.db = self.client[db]
         self.nodes_collection = self.db['nodes']
         self.edges_collection = self.db['edges']
-
+        self.edges_collection.create_index([("source", 1)])
+        self.edges_collection.create_index([("target", 1)])
+        self.edges_collection.create_index([("metaedge", 1)])
+        self.edges_collection.create_index([("source", 1), ("target", 1)])
+    
     def cleanDatabase(self):
         self.db.nodes.drop()
         self.db.edges.drop()
-        print("database cleaned")
-
+        print("Database cleaned")
+    
     def loadNodes(self, nodeFile='nodes.tsv'):
         nodes_df = pd.read_csv(nodeFile, sep='\t')
         nodes_df.rename(columns={'id': '_id'}, inplace=True)
         nodes_data = nodes_df.to_dict(orient='records')
-        compoundList = []
-        diseaseList = []
-        anatomyList = []
-        geneList = []
-        for node in nodes_data:
-            if node['kind'] == 'Compound':
-                compoundList.append(node)
-            elif node['kind'] == 'Disease':
-                diseaseList.append(node)
-            elif node['kind'] == 'Anatomy':
-                anatomyList.append(node)
-            elif node['kind'] == 'Gene':
-                geneList.append(node)
-        self.nodes_collection.insert_many(compoundList)
-        self.nodes_collection.insert_many(diseaseList)
-        self.nodes_collection.insert_many(anatomyList)
-        self.nodes_collection.insert_many(geneList)
-
-        #testing purposes
-        print(f"{len(compoundList)} inserted into the DB for compound")
-        print(f"{len(diseaseList)} inserted into the DB for disease")
-        print(f"{len(anatomyList)} inserted into the DB for anatomy")
-        print(f"{len(geneList)} inserted into the DB for gene")
-
-        # if nodes_data:
-        #     self.nodes_collection.insert_many(nodes_data)
-        #     # testing purposes
-        #     print(f"{len(nodes_data)} nodes loaded into MongoDB")
-        # else:
-        #     print("No data to insert.")
-
-    def loadEdges(self, edgeFile = 'edges.tsv'):
+        self.nodes_collection.insert_many(nodes_data)
+        print(f"{len(nodes_data)} nodes loaded into MongoDB")
+    
+    def loadEdges(self, edgeFile='edges.tsv'):
         edges_df = pd.read_csv(edgeFile, sep='\t')
         edges_data = edges_df.to_dict(orient='records')
-
-        if edges_data:
-            self.edges_collection.insert_many(edges_data)
-            # testing purposes
-            print(f"{len(edges_data)} edges loaded into MongoDB")
-        else:
-            print("No data to insert.")
-
-   
+        self.edges_collection.insert_many(edges_data)
+        print(f"{len(edges_data)} edges loaded into MongoDB")
+    
     def diseaseInfo(self, diseaseID):
         info = [
             {"$match": {"_id": diseaseID}}, 
@@ -149,13 +119,61 @@ class MongoDB:
             print(f"Palliating Drugs: {', '.join(palliating_drugs) if palliating_drugs else ' '}")
             print(f"Genes: {disease['Genes']}")
             print(f"Anatomy: {disease['Anatomy']}")
-        
-    def findMissingEdges(self):
-        pipeline = [
-        
+    
 
-        ]
-        result = list(self.edges_collection.aggregate(pipeline))
-        # print(result)
+    
+    def findMatchingEdges(self):
+            pipeline = [
+                # Step 1: Match all CuG edges
+                {
+                    "$match": {"metaedge": "CuG"}
+                },
 
-   
+                # Step 2: Lookup for matching AdG edges with the same target
+                {
+                    "$lookup": {
+                        "from": "edges",
+                        "let": {"cu_target": "$target"},
+                        "pipeline": [
+                            {"$match": {
+                                "$expr": {
+                                    "$and": [
+                                        {"$eq": ["$metaedge", "AdG"]},
+                                        {"$eq": ["$target", "$$cu_target"]}
+                                    ]
+                                }
+                            }},
+                            {"$project": {"_id": 0, "source": 1, "metaedge": 1, "target": 1}}  # Select relevant fields
+                        ],
+                        "as": "adg_edges"
+                    }
+                },
+
+                # Step 3: Match only CuG edges that have corresponding AdG edges
+                {
+                    "$match": {
+                        "adg_edges": {"$ne": []}  # Ensure there is at least one matching AdG edge
+                    }
+                },
+
+                # Step 4: Project the results to include both CuG and AdG edges
+                {
+                    "$project": {
+                        "CuG_edge": {"source": "$source", "metaedge": "$metaedge", "target": "$target"},
+                        "AdG_edges": "$adg_edges"
+                    }
+                }
+            ]
+
+            # Execute the aggregation pipeline
+            results = list(self.edges_collection.aggregate(pipeline))
+
+            # Step 5: Print the results
+            for result in results:
+                cu_g_edge = result['CuG_edge']
+                for ad_g_edge in result['AdG_edges']:
+                    print(f"CuG Edge: {cu_g_edge}")
+                    print(f"AdG Edge: {ad_g_edge}")
+                    print("-" * 40)
+
+            print(len(results))
