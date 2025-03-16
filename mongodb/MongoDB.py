@@ -7,15 +7,10 @@ class MongoDB:
         self.db = self.client[db]
         self.nodes_collection = self.db['nodes']
         self.edges_collection = self.db['edges']
-
-        # Optimize queries with proper indexing
         self.edges_collection.create_index([("source", ASCENDING)])
         self.edges_collection.create_index([("target", ASCENDING)])
         self.edges_collection.create_index([("metaedge", ASCENDING)])
         self.edges_collection.create_index([("source", ASCENDING), ("target", ASCENDING)])
-        
-        # Optional: You can create additional compound or partial indexes here, if needed
-        # For example, if you know you will frequently query on metaedge with source and target
         self.edges_collection.create_index([("metaedge", ASCENDING), ("source", ASCENDING)])
 
     def cleanDatabase(self):
@@ -313,76 +308,290 @@ class MongoDB:
     #     print(f"Number of edges with filtered metaedge 'AuG': {len(AuGFiltered)}")
 
         
+    
+
+
+
+# time limit issue
+# def findMatchingEdges(self):
+#         try:
+#             pipeline = [
+#                 # Step 1: Match all CuG and CdG edges
+#                 {
+#                     "$match": {"metaedge": {"$in": ["CuG", "CdG"]}}
+#                 },
+#                 # Step 2: Use a single $lookup to match both AdG for CuG and AuG for CdG based on target
+#                 {
+#                     "$lookup": {
+#                         "from": "edges",
+#                         "let": {
+#                             "target": "$target",
+#                             "metaedge_type": "$metaedge"
+#                         },
+#                         "pipeline": [
+#                             # Match based on target and metaedge conditions
+#                             {
+#                                 "$match": {
+#                                     "$expr": {
+#                                         "$and": [
+#                                             # Ensure target matches
+#                                             {"$eq": ["$target", "$$target"]},
+#                                             # Conditionally match based on CuG → AdG or CdG → AuG
+#                                             {"$or": [
+#                                                 {"$and": [{"$eq": ["$metaedge", "AdG"]}, {"$eq": ["$$metaedge_type", "CuG"]}]},
+#                                                 {"$and": [{"$eq": ["$metaedge", "AuG"]}, {"$eq": ["$$metaedge_type", "CdG"]}]}
+#                                             ]}
+#                                         ]
+#                                     }
+#                                 }
+#                             },
+#                             # Only project necessary fields
+#                             {"$project": {"_id": 0, "source": 1, "metaedge": 1, "target": 1}}
+#                         ],
+#                         "as": "matching_edges"
+#                     }
+#                 },
+#                 # Step 3: Filter out edges without matching AdG/AuG edges
+#                 {
+#                     "$match": {
+#                         "matching_edges": {"$ne": []}
+#                     }
+#                 },
+#                 # Step 4: Lookup for matching DlA edges for each Matched AdG/AuG edge
+#                 {
+#                     "$lookup": {
+#                         "from": "edges",
+#                         "let": {
+#                             "matched_sources": "$matching_edges.source"
+#                         },
+#                         "pipeline": [
+#                             {
+#                                 "$match": {
+#                                     "$expr": {
+#                                         "$and": [
+#                                             {"$eq": ["$metaedge", "DlA"]},
+#                                             {"$in": ["$target", "$$matched_sources"]}  # Match if source of AdG/AuG is the target of DlA
+#                                         ]
+#                                     }
+#                                 }
+#                             },
+#                             {"$project": {"_id": 0, "source": 1, "metaedge": 1, "target": 1}}  # Only project the necessary fields
+#                         ],
+#                         "as": "dlA_edges"
+#                     }
+#                 },
+#                 # Step 5: Create the new CtD edges and project the results
+#                 {
+#                     "$project": {
+#                         "Edge": {"source": "$source", "metaedge": "$metaedge", "target": "$target"},
+#                         "Matched_AdG_AuG_edges": "$matching_edges",
+#                         "DlA_edges": "$dlA_edges",
+#                         "New_CtD_Edges": {
+#                             "$map": {
+#                                 "input": "$dlA_edges",
+#                                 "as": "dlA_edge",
+#                                 "in": {
+#                                     "$let": {
+#                                         "vars": {
+#                                             "cu_or_cd_source": "$source"  # CuG/CdG source
+#                                         },
+#                                         "in": {
+#                                             "source": "$$cu_or_cd_source",  # Source from CuG or CdG
+#                                             "metaedge": "CtD",
+#                                             "target": "$$dlA_edge.source"  # Target from DlA edge
+#                                         }
+#                                     }
+#                                 }
+#                             }
+#                         }
+#                     }
+#                 }
+#             ]
+
+#             # Execute the aggregation pipeline
+#             results = list(self.edges_collection.aggregate(pipeline))
+
+#             # Step 6: Print the results
+#             if results:
+#                 matching_edges_count = 0
+#                 for result in results:
+#                     edge = result['Edge']
+#                     print(f"Edge: {edge}")
+                    
+#                     for matched_edge in result['Matched_AdG_AuG_edges']:
+#                         print(f"    Matched AdG/AuG Edge: {matched_edge}")
+                    
+#                     for new_ctd_edge in result['New_CtD_Edges']:
+#                         print(f"    New CtD Edge: {new_ctd_edge}")
+                    
+#                     print("-" * 40)
+#                     matching_edges_count += 1
+
+#                 print(f"Total matching CuG/CdG edges: {matching_edges_count}")
+#             else:
+#                 print("No matching edges found.")
+
+#         except Exception as e:
+#             print(f"An error occurred: {e}")
+
+
+
+
+
+
+
+
+    # def findMatchingEdges(self):
+   
+    #     pipeline = [
+    #         # Step 1: Match all CuG and CdG edges
+    #         {
+    #             "$match": {"metaedge": {"$in": ["CuG", "CdG"]}}
+    #         },
+    #         # Step 2: Use a single $lookup to match both AdG for CuG and AuG for CdG based on target
+    #         {
+    #             "$lookup": {
+    #                 "from": "edges",
+    #                 "let": {
+    #                     "target": "$target",
+    #                     "metaedge_type": "$metaedge"
+    #                 },
+    #                 "pipeline": [
+    #                     # Match based on target and metaedge conditions
+    #                     {
+    #                         "$match": {
+    #                             "$expr": {
+    #                                 "$and": [
+    #                                     # Ensure target matches
+    #                                     {"$eq": ["$target", "$$target"]},
+    #                                     # Conditionally match based on CuG → AdG or CdG → AuG
+    #                                     {"$or": [
+    #                                         {"$and": [{"$eq": ["$metaedge", "AdG"]}, {"$eq": ["$$metaedge_type", "CuG"]}]},
+    #                                         {"$and": [{"$eq": ["$metaedge", "AuG"]}, {"$eq": ["$$metaedge_type", "CdG"]}]}
+    #                                     ]}
+    #                                 ]
+    #                             }
+    #                         }
+    #                     },
+    #                     # Only project necessary fields
+    #                     {"$project": {"_id": 0, "source": 1, "metaedge": 1, "target": 1}}
+    #                 ],
+    #                 "as": "matching_edges"
+    #             }
+    #         },
+    #         # Step 3: Filter out edges without matching AdG/AuG edges
+    #         {
+    #             "$match": {
+    #                 "matching_edges": {"$ne": []}
+    #             }
+    #         },
+    #         # Step 4: Project the results to include CuG/CdG and their matched AdG/AuG edges
+    #         {
+    #             "$project": {
+    #                 "Edge": {"source": "$source", "metaedge": "$metaedge", "target": "$target"},
+    #                 "Matched_AdG_AuG_edges": "$matching_edges"
+    #             }
+    #         }
+    #     ]
+    #     results = list(self.edges_collection.aggregate(pipeline))
+
+    #     # Step 5: Print the results
+    #     if results:
+    #         matching_edges_count = 0
+    #         for result in results:
+    #             edge = result['Edge']
+    #             print(f"Edge: {edge}")
+    #             for matched_edge in result['Matched_AdG_AuG_edges']:
+    #                 print(f"    Matched AdG/AuG Edge: {matched_edge}")
+    #             print("-" * 40)
+    #             matching_edges_count += 1
+
+    #         print(f"Total matching CuG/CdG edges: {matching_edges_count}")
+    #     else:
+    #         print("No matching edges found.")
+
+
+# 
+
+
     def findMatchingEdges(self):
-        try:
-            pipeline = [
-                # Step 1: Match all CuG and CdG edges
-                {
-                    "$match": {"metaedge": {"$in": ["CuG", "CdG"]}}
-                },
-                # Step 2: Use a single $lookup to match both AdG for CuG and AuG for CdG based on target
-                {
-                    "$lookup": {
-                        "from": "edges",
-                        "let": {
-                            "target": "$target",
-                            "metaedge_type": "$metaedge"
-                        },
-                        "pipeline": [
-                            # Match based on target and metaedge conditions
-                            {
-                                "$match": {
-                                    "$expr": {
-                                        "$and": [
-                                            # Ensure target matches
-                                            {"$eq": ["$target", "$$target"]},
-                                            # Conditionally match based on CuG → AdG or CdG → AuG
-                                            {"$or": [
+        pipeline = [
+            # Step 1: Match all CuG and CdG edges
+            {
+                "$match": {"metaedge": {"$in": ["CuG", "CdG"]}}
+            },
+            # Step 2: Use a single $lookup to match both AdG for CuG and AuG for CdG based on target
+            {
+                "$lookup": {
+                    "from": "edges",
+                    "let": {
+                        "target": "$target",
+                        "metaedge_type": "$metaedge"
+                    },
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": {
+                                    "$and": [
+                                        {"$eq": ["$target", "$$target"]},
+                                        {
+                                            "$or": [
                                                 {"$and": [{"$eq": ["$metaedge", "AdG"]}, {"$eq": ["$$metaedge_type", "CuG"]}]},
                                                 {"$and": [{"$eq": ["$metaedge", "AuG"]}, {"$eq": ["$$metaedge_type", "CdG"]}]}
-                                            ]}
-                                        ]
-                                    }
+                                            ]
+                                        }
+                                    ]
                                 }
-                            },
-                            # Only project necessary fields
-                            {"$project": {"_id": 0, "source": 1, "metaedge": 1, "target": 1}}
-                        ],
-                        "as": "matching_edges"
-                    }
-                },
-                # Step 3: Filter out edges without matching AdG/AuG edges
-                {
-                    "$match": {
-                        "matching_edges": {"$ne": []}
-                    }
-                },
-                # Step 4: Project the results to include CuG/CdG and their matched AdG/AuG edges
-                {
-                    "$project": {
-                        "Edge": {"source": "$source", "metaedge": "$metaedge", "target": "$target"},
-                        "Matched_AdG_AuG_edges": "$matching_edges"
-                    }
+                            }
+                        },
+                        {"$project": {"_id": 0, "source": 1, "metaedge": 1, "target": 1}}
+                    ],
+                    "as": "matching_edges"
                 }
-            ]
-
-            # Execute the aggregation pipeline
-            results = list(self.edges_collection.aggregate(pipeline))
-
-            # Step 5: Print the results
-            if results:
-                matching_edges_count = 0
-                for result in results:
-                    edge = result['Edge']
-                    print(f"Edge: {edge}")
-                    for matched_edge in result['Matched_AdG_AuG_edges']:
-                        print(f"    Matched AdG/AuG Edge: {matched_edge}")
-                    print("-" * 40)
-                    matching_edges_count += 1
-
-                print(f"Total matching CuG/CdG edges: {matching_edges_count}")
-            else:
-                print("No matching edges found.")
-
-        except Exception as e:
-            print(f"An error occurred: {e}")
+            },
+            # Step 3: Filter out edges without matching AdG/AuG edges
+            {
+                "$match": {
+                    "matching_edges": {"$ne": []}
+                }
+            },
+            # Step 4: Project the results to include CuG/CdG and their matched AdG/AuG edges
+            {
+                "$project": {
+                    "Edge": {"source": "$source", "metaedge": "$metaedge", "target": "$target"},
+                    "Matched_AdG_AuG_edges": "$matching_edges"
+                }
+            }
+        ]
+        results = list(self.edges_collection.aggregate(pipeline))
+        DlAEdges = list(self.edges_collection.find({"metaedge": "DlA"}))
+        #print(f"Found {len(DlAEdges)} DlA edges.")
+        if results:
+            CtD_edges = []
+            matching_edges_count = 0
+            for result in results:
+                edge = result['Edge']  # CuG/CdG edge
+                for matched_edge in result['Matched_AdG_AuG_edges']:
+                    for dla_edge in DlAEdges:
+                        if matched_edge['source'] == dla_edge['target']:  #AdG/AuG source with DlA target
+                            ctD_edge = {
+                                "source": edge['source'],  # CuG/CdG source
+                                "metaedge": "CtD",
+                                "target": dla_edge['source']  # DlA source
+                            }
+                            CtD_edges.append(ctD_edge)
+                            #print(f"Created CtD Edge: {ctD_edge}")
+                            matching_edges_count += 1
+                    #print("-" * 40)
+            CtDEdges = list(self.edges_collection.find({"metaedge": "CtD"}))
+            existing_ctd_set = set((edge['source'], edge['target']) for edge in CtDEdges)
+            counter = 0
+            for ctD_edge in CtD_edges:
+                if (ctD_edge['source'], ctD_edge['target']) not in existing_ctd_set:
+                    print(f"{ctD_edge}")
+                    counter += 1
+            print(f"Total matching CtD edges: {matching_edges_count}")
+            print(f"Found {len(CtDEdges)} CtD edges in the database.")
+            print(f"There are {counter} missing edges.")
+        else:
+            print("No matching edges found.")
