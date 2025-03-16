@@ -119,8 +119,7 @@ class MongoDB:
             print(f"Palliating Drugs: {', '.join(palliating_drugs) if palliating_drugs else ' '}")
             print(f"Genes: {disease['Genes']}")
             print(f"Anatomy: {disease['Anatomy']}")
-
-  
+        
 
     # def matchEdgesByTarget(self):
      
@@ -514,7 +513,7 @@ class MongoDB:
 # 
 
 
-    def findMatchingEdges(self):
+    def missingEdges(self):
         pipeline = [
             # Step 1: Match all CuG and CdG edges
             {
