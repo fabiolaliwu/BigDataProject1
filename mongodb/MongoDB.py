@@ -79,9 +79,9 @@ class MongoDB:
                         }
                     },
                     "genes": {
-                        "$addToSet": {
+                        "$push": {
                             "$cond": [
-                                {"$eq": ["$foundEdge.metaedge", "DdG"]},
+                                {"$eq": ["$foundEdge.metaedge", "DaG"]}, 
                                 "$related_nodes.name",
                                 None
                             ]
@@ -90,7 +90,7 @@ class MongoDB:
                     "anatomy": {
                         "$addToSet": {
                             "$cond": [
-                                {"$eq": ["$foundEdge.metaedge", "DlA"]},
+                                {"$eq": ["$foundEdge.metaedge", "DlA"]},  # Anatomy (metaedge = 'DlA')
                                 "$related_nodes.name",
                                 None
                             ]
@@ -111,15 +111,80 @@ class MongoDB:
             }
         ]
         result = list(self.nodes_collection.aggregate(info))
+
+        # treating_drugs = self.edges_collection.find({"metaedge": "CtD", "target": diseaseID})
+        # palliating_drugs = self.edges_collection.find({"metaedge": "CpD", "target": diseaseID})
+        # genes = self.edges_collection.find({"metaedge": "DaG", "target": diseaseID})
+        # anatomy = self.edges_collection.find({"metaedge": "DlA", "target": diseaseID})
+
+        # treating_drug_sources = []
+        # palliating_drug_sources = []
+        # genes_target = []
+        # anatomy_target = []
+
+        # # Iterate through the cursor and store the 'source' in the list
+        # for drug in treating_drugs:
+        #     treating_drug_sources.append(drug['source'])
+        # for drug in palliating_drugs:
+        #     palliating_drug_sources.append(drug['source'])
+        # for drug in genes:
+        #     genes_target.append(drug['target'])
+        # for drug in anatomy:
+        #     anatomy_target.append(drug['target'])
+
+
+        # if treating_drug_sources:
+        #     print(f"Treating Drugs: {', '.join(treating_drug_sources)}")
+        # else:
+        #     print("No treating drugs available.")
+        # if palliating_drug_sources:
+        #     print(f"Palliating Drugs: {', '.join(palliating_drug_sources)}")
+        # else:
+        #     print("No palliating drugs available.")
+        # if genes_target:
+        #     print(f"Genes: {', '.join(genes_target)}")
+        # else:
+        #     print("No genes available.")
+        # if anatomy_target:
+        #     print(f"Anatomy: {', '.join(anatomy_target)}")
+        # else:
+        #     print("No anatomy available.")
+        
+
+
+
+    
+
         if result:
             disease = result[0]
+            
+            # Print disease name
             print(f"Name: {disease['Name']}")
-            print(f"Treating Drugs: {disease['Treating drugs']}")
+            
+            # Flatten Treating Drugs list if it's a list of lists
+            treating_drugs = [drug for sublist in disease['Treating drugs'] for drug in sublist]
+            print(f"Treating Drugs: {', '.join(treating_drugs) if treating_drugs else 'No treating drugs available'}")
+
+            # Flatten Palliating Drugs list if it's a list of lists
             palliating_drugs = [drug for sublist in disease['Palliating drugs'] for drug in sublist]
-            print(f"Palliating Drugs: {', '.join(palliating_drugs) if palliating_drugs else ' '}")
-            print(f"Genes: {disease['Genes']}")
-            print(f"Anatomy: {disease['Anatomy']}")
+            print(f"Palliating Drugs: {', '.join(palliating_drugs) if palliating_drugs else 'No palliative drugs available'}")
+            
+            # Print Genes
+            genes = disease.get('Genes', [])
+            if genes:
+                print(f"Genes: {', '.join(genes)}")
+            else:
+                print("Genes: No genes data available")
+            
+            # Print Anatomy
+            anatomy = disease.get('Anatomy', [])
+            if anatomy:
+                print(f"Anatomy: {', '.join(anatomy)}")
+            else:
+                print("Anatomy: No anatomical data available")
         
+        else:
+            print("No results found for the given disease ID.")
 
     # def matchEdgesByTarget(self):
      
