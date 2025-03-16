@@ -14,7 +14,10 @@ if __name__ == "__main__":
 
     # disease_id = "Disease::DOID:1094"
     # testingMongoDB.diseaseInfo(disease_id)
+
+    #testingMongoDB.findMatchingEdges()
     testingMongoDB.findMatchingEdges()
+
     # testingMongoDB.checkEdges()
     # testingMongoDB.checkAnatomyEdges()
     # testingMongoDB.testDatabase()
