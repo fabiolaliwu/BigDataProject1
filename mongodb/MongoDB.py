@@ -320,64 +320,48 @@ class MongoDB:
                 {
                     "$match": {"metaedge": {"$in": ["CuG", "CdG"]}}
                 },
-                # Step 2: Lookup for matching AdG edges for CuG edges
+                # Step 2: Use a single $lookup to match both AdG for CuG and AuG for CdG based on target
                 {
                     "$lookup": {
                         "from": "edges",
-                        "let": {"cu_target": "$target"},
+                        "let": {
+                            "target": "$target",
+                            "metaedge_type": "$metaedge"
+                        },
                         "pipeline": [
-                            {"$match": {
-                                "$expr": {
-                                    "$and": [
-                                        {"$eq": ["$metaedge", "AdG"]},
-                                        {"$eq": ["$target", "$$cu_target"]}
-                                    ]
+                            # Match based on target and metaedge conditions
+                            {
+                                "$match": {
+                                    "$expr": {
+                                        "$and": [
+                                            # Ensure target matches
+                                            {"$eq": ["$target", "$$target"]},
+                                            # Conditionally match based on CuG → AdG or CdG → AuG
+                                            {"$or": [
+                                                {"$and": [{"$eq": ["$metaedge", "AdG"]}, {"$eq": ["$$metaedge_type", "CuG"]}]},
+                                                {"$and": [{"$eq": ["$metaedge", "AuG"]}, {"$eq": ["$$metaedge_type", "CdG"]}]}
+                                            ]}
+                                        ]
+                                    }
                                 }
-                            }},
-                            {"$project": {"_id": 0, "source": 1, "metaedge": 1, "target": 1}}  # Select relevant fields
+                            },
+                            # Only project necessary fields
+                            {"$project": {"_id": 0, "source": 1, "metaedge": 1, "target": 1}}
                         ],
-                        "as": "adg_edges"
+                        "as": "matching_edges"
                     }
                 },
-                # Step 3: Lookup for matching AuG edges for CdG edges
-                {
-                    "$lookup": {
-                        "from": "edges",
-                        "let": {"cd_target": "$target"},
-                        "pipeline": [
-                            {"$match": {
-                                "$expr": {
-                                    "$and": [
-                                        {"$eq": ["$metaedge", "AuG"]},
-                                        {"$eq": ["$target", "$$cd_target"]}
-                                    ]
-                                }
-                            }},
-                            {"$project": {"_id": 0, "source": 1, "metaedge": 1, "target": 1}}  # Select relevant fields
-                        ],
-                        "as": "aug_edges"
-                    }
-                },
-                # Step 4: Match only edges that have corresponding AdG or AuG edges
+                # Step 3: Filter out edges without matching AdG/AuG edges
                 {
                     "$match": {
-                        "$or": [
-                            {"metaedge": "CuG", "adg_edges": {"$ne": []}},  # Match CuG edges with AdG matches
-                            {"metaedge": "CdG", "aug_edges": {"$ne": []}}   # Match CdG edges with AuG matches
-                        ]
+                        "matching_edges": {"$ne": []}
                     }
                 },
-                # Step 5: Project the results to include CuG/CdG edges and their matched AdG/AuG edges
+                # Step 4: Project the results to include CuG/CdG and their matched AdG/AuG edges
                 {
                     "$project": {
                         "Edge": {"source": "$source", "metaedge": "$metaedge", "target": "$target"},
-                        "Matched_AdG_AuG_edges": {
-                            "$cond": {
-                                "if": {"$eq": ["$metaedge", "CuG"]},
-                                "then": "$adg_edges",
-                                "else": "$aug_edges"
-                            }
-                        }
+                        "Matched_AdG_AuG_edges": "$matching_edges"
                     }
                 }
             ]
@@ -385,7 +369,7 @@ class MongoDB:
             # Execute the aggregation pipeline
             results = list(self.edges_collection.aggregate(pipeline))
 
-            # Step 6: Print the results
+            # Step 5: Print the results
             if results:
                 matching_edges_count = 0
                 for result in results:
