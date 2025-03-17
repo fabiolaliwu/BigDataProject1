@@ -11,7 +11,12 @@ if __name__ == "__main__":
     # print("You chose option ", option)
     
     testingMongoDB = MongoDB()
-    testingMongoDB.diseaseInfo("Disease::DOID:4989")
+    # testingMongoDB.cleanDatabase()
+    # testingMongoDB.loadNodes()
+    # testingMongoDB.loadEdges()
+    testingMongoDB.diseaseInfo("Disease::DOID:0050156")
+
+    # testingMongoDB.diseaseInfo("Disease::DOID:4989")
     #already in DataBase so do not mess up by uncommenting it
     #print("Loading nodes into MongoDB")
     # testingMongoDB.cleanDatabase()  

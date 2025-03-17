@@ -18,173 +18,275 @@ class MongoDB:
         self.edges_collection.drop()
         print("Database cleaned")
     
-    def loadNodes(self, nodeFile='nodes.tsv'):
+    def loadNodes(self, nodeFile= "/Users/fabiolaliwu/Desktop/BigDataProject1/data/nodes.tsv"):
         nodes_df = pd.read_csv(nodeFile, sep='\t')
         nodes_df.rename(columns={'id': '_id'}, inplace=True)
+        nodes_df = nodes_df[['_id', 'name', 'kind']]
         nodes_data = nodes_df.to_dict(orient='records')
         self.nodes_collection.insert_many(nodes_data)
-        print(f"{len(nodes_data)} nodes loaded into MongoDB")
+        print(f"{len(nodes_data)} nodes uploaded into MongoDB")
     
-    def loadEdges(self, edgeFile='edges.tsv'):
+    def loadEdges(self, edgeFile="/Users/fabiolaliwu/Desktop/BigDataProject1/data/edges.tsv"):
         edges_df = pd.read_csv(edgeFile, sep='\t')
+        edges_df = edges_df[['source', 'metaedge', 'target']]
         edges_data = edges_df.to_dict(orient='records')
         self.edges_collection.insert_many(edges_data)
         print(f"{len(edges_data)} edges loaded into MongoDB")
 
+    def get_node_names(self, ids):
+        """ Helper function to fetch the names from nodes collection based on ids """
+        names = []
+        for node_id in ids:
+            node = self.nodes_collection.find_one({"_id": node_id})
+            if node and "name" in node:
+                names.append(node["name"])
+        return names
+
     def diseaseInfo(self, diseaseID):
-        info = [
-            {"$match": {"_id": diseaseID}}, 
+        pipeline = [
             {
-                "$lookup": {
-                    "from": "edges",
-                    "localField": "_id",
-                    "foreignField": "target",
-                    "as": "foundEdge"
-                }
-            },
-            {
-                "$unwind": {
-                    "path": "$foundEdge",
-                    "preserveNullAndEmptyArrays": True
+                "$match": {
+                    "$or": [
+                        {"metaedge": "CtD", "target": diseaseID},
+                        {"metaedge": "CpD", "target": diseaseID},
+                        {"metaedge": "DdG", "source": diseaseID},
+                        {"metaedge": "DlA", "source": diseaseID}
+                    ]
                 }
             },
             {
                 "$lookup": {
-                    "from": "nodes",
-                    "localField": "foundEdge.source",
-                    "foreignField": "_id",
-                    "as": "related_nodes"
+                    "from": "nodes",  # The collection we're joining with
+                    "localField": "target",  # The field in the edges collection
+                    "foreignField": "_id",  # The field in the nodes collection
+                    "as": "target_node"  # The alias for the joined data
                 }
             },
             {
-                "$group": {
-                    "_id": "$_id",
-                    "Name": {"$first": "$name"},
-                    "Treating drugs": {
-                        "$addToSet": {
-                            "$cond": [
-                                {"$in": ["$foundEdge.metaedge", ["CtD"]]},
-                                "$related_nodes.name",
-                                None
-                            ]
-                        }
-                    },
-                    "Palliating drugs": {
-                        "$push": {
-                            "$cond": [
-                                {"$in": ["$foundEdge.metaedge", ["CpD"]]},
-                                "$related_nodes.name",
-                                None
-                            ]
-                        }
-                    },
-                    "genes": {
-                        "$push": {
-                            "$cond": [
-                                {"$eq": ["$foundEdge.metaedge", "DaG"]}, 
-                                "$related_nodes.name",
-                                None
-                            ]
-                        }
-                    },
-                    "anatomy": {
-                        "$addToSet": {
-                            "$cond": [
-                                {"$eq": ["$foundEdge.metaedge", "DlA"]},  # Anatomy (metaedge = 'DlA')
-                                "$related_nodes.name",
-                                None
-                            ]
-                        }
-                    }
+                "$lookup": {
+                    "from": "nodes",  # The collection we're joining with
+                    "localField": "source",  # The field in the edges collection
+                    "foreignField": "_id",  # The field in the nodes collection
+                    "as": "source_node"  # The alias for the joined data
                 }
             },
             {
                 "$project": {
-                    "_id": 0,
-                    "ID": "$_id",
-                    "Name": 1,
-                    "Treating drugs": {"$filter": {"input": "$Treating drugs", "as": "item", "cond": {"$ne": ["$$item", None]}}},
-                    "Palliating drugs": {"$filter": {"input": "$Palliating drugs", "as": "item", "cond": {"$ne": ["$$item", None]}}},
-                    "Genes": {"$filter": {"input": "$genes", "as": "item", "cond": {"$ne": ["$$item", None]}}},
-                    "Anatomy": {"$filter": {"input": "$anatomy", "as": "item", "cond": {"$ne": ["$$item", None]}}}
+                    "source_name": {"$arrayElemAt": ["$source_node.name", 0]}, 
+                    "metaedge": 1,
+                    "target_name": {"$arrayElemAt": ["$target_node.name", 0]} 
                 }
             }
         ]
-        result = list(self.nodes_collection.aggregate(info))
+        result = self.edges_collection.aggregate(pipeline)
 
-        # treating_drugs = self.edges_collection.find({"metaedge": "CtD", "target": diseaseID})
-        # palliating_drugs = self.edges_collection.find({"metaedge": "CpD", "target": diseaseID})
-        # genes = self.edges_collection.find({"metaedge": "DaG", "target": diseaseID})
-        # anatomy = self.edges_collection.find({"metaedge": "DlA", "target": diseaseID})
+        treating_drug_sources = []
+        palliating_drug_sources = []
+        genes_target = []
+        anatomy_target = []
+        for item in result:
+            if item['metaedge'] == 'CtD' and item.get('source_name'):
+                treating_drug_sources.append(item['source_name'])
+            elif item['metaedge'] == 'CpD' and item.get('source_name'):
+                palliating_drug_sources.append(item['source_name'])
+            elif item['metaedge'] == 'DdG' and item.get('target_name'):
+                genes_target.append(item['target_name'])
+            elif item['metaedge'] == 'DlA' and item.get('target_name'):
+                anatomy_target.append(item['target_name'])
 
+        disease = self.nodes_collection.find_one({"_id": diseaseID})
+        disease_name = disease["name"]
+
+        # Print the results
+        print("=====Info=====")
+        print(f"ID: {diseaseID}")
+        print(f"Name: {disease_name}")
+        print(f"Treating Drugs: {', '.join(treating_drug_sources) if treating_drug_sources else 'No treating drugs available.'}")
+        print(f"Palliating Drugs: {', '.join(palliating_drug_sources) if palliating_drug_sources else 'No palliating drugs available.'}")
+        print(f"Genes: {', '.join(genes_target) if genes_target else 'No genes available.'}")
+        print(f"Anatomy: {', '.join(anatomy_target) if anatomy_target else 'No anatomy available.'}")
+
+        # info = [
+        #     {"$match": {"_id": diseaseID}}, 
+        #     {
+        #         "$lookup": {
+        #             "from": "edges",
+        #             "localField": "_id",
+        #             "foreignField": "target",
+        #             "as": "foundEdge"
+        #         }
+        #     },
+        #     {
+        #         "$unwind": {
+        #             "path": "$foundEdge",
+        #             "preserveNullAndEmptyArrays": True
+        #         }
+        #     },
+        #     {
+        #         "$lookup": {
+        #             "from": "nodes",
+        #             "localField": "foundEdge.source",
+        #             "foreignField": "_id",
+        #             "as": "related_nodes"
+        #         }
+        #     },
+        #     {
+        #         "$group": {
+        #             "_id": "$_id",
+        #             "Name": {"$first": "$name"},
+        #             "Treating drugs": {
+        #                 "$addToSet": {
+        #                     "$cond": [
+        #                         {"$in": ["$foundEdge.metaedge", ["CtD"]]},
+        #                         "$related_nodes.name",
+        #                         None
+        #                     ]
+        #                 }
+        #             },
+        #             "Palliating drugs": {
+        #                 "$push": {
+        #                     "$cond": [
+        #                         {"$in": ["$foundEdge.metaedge", ["CpD"]]},
+        #                         "$related_nodes.name",
+        #                         None
+        #                     ]
+        #                 }
+        #             },
+        #             "genes": {
+        #                 "$push": {
+        #                     "$cond": [
+        #                         {"$eq": ["$foundEdge.metaedge", "DaG"]}, 
+        #                         "$related_nodes.name",
+        #                         None
+        #                     ]
+        #                 }
+        #             },
+        #             "anatomy": {
+        #                 "$addToSet": {
+        #                     "$cond": [
+        #                         {"$eq": ["$foundEdge.metaedge", "DlA"]},  # Anatomy (metaedge = 'DlA')
+        #                         "$related_nodes.name",
+        #                         None
+        #                     ]
+        #                 }
+        #             }
+        #         }
+        #     },
+        #     {
+        #         "$project": {
+        #             "_id": 0,
+        #             "ID": "$_id",
+        #             "Name": 1,
+        #             "Treating drugs": {"$filter": {"input": "$Treating drugs", "as": "item", "cond": {"$ne": ["$$item", None]}}},
+        #             "Palliating drugs": {"$filter": {"input": "$Palliating drugs", "as": "item", "cond": {"$ne": ["$$item", None]}}},
+        #             "Genes": {"$filter": {"input": "$genes", "as": "item", "cond": {"$ne": ["$$item", None]}}},
+        #             "Anatomy": {"$filter": {"input": "$anatomy", "as": "item", "cond": {"$ne": ["$$item", None]}}}
+        #         }
+        #     }
+        # ]
+        # result = list(self.nodes_collection.aggregate(info))
+        # if result:
+        #     disease = result[0]
+            
+        #     # Print disease name
+        #     print(f"Name: {disease['Name']}")
+            
+        #     # Flatten Treating Drugs list if it's a list of lists
+        #     treating_drugs = [drug for sublist in disease['Treating drugs'] for drug in sublist]
+        #     print(f"Treating Drugs: {', '.join(treating_drugs) if treating_drugs else 'No treating drugs available'}")
+
+        #     # Flatten Palliating Drugs list if it's a list of lists
+        #     palliating_drugs = [drug for sublist in disease['Palliating drugs'] for drug in sublist]
+        #     print(f"Palliating Drugs: {', '.join(palliating_drugs) if palliating_drugs else 'No palliative drugs available'}")
+            
+        #     # Print Genes
+        #     genes = disease.get('Genes', [])
+        #     if genes:
+        #         print(f"Genes: {', '.join(genes)}")
+        #     else:
+        #         print("Genes: No genes data available")
+            
+        #     # Print Anatomy
+        #     anatomy = disease.get('Anatomy', [])
+        #     if anatomy:
+        #         print(f"Anatomy: {', '.join(anatomy)}")
+        #     else:
+        #         print("Anatomy: No anatomical data available")
+        
+        # else:
+        #     print("No results found for the given disease ID.")
+
+
+
+
+ # # Query for edges with the specific metaedges and diseaseID as source/target
+        # treating_drugs_cursor = self.edges_collection.find({"metaedge": "CtD", "target": diseaseID})
+        # palliating_drugs_cursor = self.edges_collection.find({"metaedge": "CpD", "target": diseaseID})
+        # genes_cursor = self.edges_collection.find({"metaedge": "DdG", "source": diseaseID})
+        # anatomy_cursor = self.edges_collection.find({"metaedge": "DlA", "source": diseaseID})
+
+        # # Convert the cursors to lists so we can iterate multiple times
+        # treating_drugs = list(treating_drugs_cursor)
+        # palliating_drugs = list(palliating_drugs_cursor)
+        # genes = list(genes_cursor)
+        # anatomy = list(anatomy_cursor)
+
+        # # Debug: Print the number of matching results and the results themselves
+        # print(f"Number of treating drugs: {len(treating_drugs)}")
+        # print(f"Number of palliating drugs: {len(palliating_drugs)}")
+        # print(f"Number of genes: {len(genes)}")
+        # print(f"Number of anatomy: {len(anatomy)}")
+
+        # # Lists to store the relevant source/target values
         # treating_drug_sources = []
         # palliating_drug_sources = []
         # genes_target = []
         # anatomy_target = []
 
-        # # Iterate through the cursor and store the 'source' in the list
-        # for drug in treating_drugs:
-        #     treating_drug_sources.append(drug['source'])
-        # for drug in palliating_drugs:
-        #     palliating_drug_sources.append(drug['source'])
+        # # Print the entire documents for genes and anatomy (for debugging)
+        # print("\nGenes Documents:")
         # for drug in genes:
-        #     genes_target.append(drug['target'])
+        #     print(drug)  # Print the entire document for debugging
+            
+        # print("\nAnatomy Documents:")
         # for drug in anatomy:
-        #     anatomy_target.append(drug['target'])
+        #     print(drug)  # Print the entire document for debugging
 
+        # # Iterate through the list and store the 'source' or 'target' in the list
+        # for drug in treating_drugs:
+        #     if 'source' in drug:  # Ensure the key exists
+        #         treating_drug_sources.append(drug['source'])
+        # for drug in palliating_drugs:
+        #     if 'source' in drug:  # Ensure the key exists
+        #         palliating_drug_sources.append(drug['source'])
+        # for drug in genes:
+        #     if 'target' in drug:  # Ensure the key exists
+        #         genes_target.append(drug['target'])
+        # for drug in anatomy:
+        #     if 'target' in drug:  # Ensure the key exists
+        #         anatomy_target.append(drug['target'])
 
+        # # Print the results
         # if treating_drug_sources:
         #     print(f"Treating Drugs: {', '.join(treating_drug_sources)}")
         # else:
         #     print("No treating drugs available.")
+
         # if palliating_drug_sources:
         #     print(f"Palliating Drugs: {', '.join(palliating_drug_sources)}")
         # else:
         #     print("No palliating drugs available.")
+
         # if genes_target:
         #     print(f"Genes: {', '.join(genes_target)}")
         # else:
         #     print("No genes available.")
+
         # if anatomy_target:
         #     print(f"Anatomy: {', '.join(anatomy_target)}")
         # else:
         #     print("No anatomy available.")
-        
 
-
-
-    
-
-        if result:
-            disease = result[0]
-            
-            # Print disease name
-            print(f"Name: {disease['Name']}")
-            
-            # Flatten Treating Drugs list if it's a list of lists
-            treating_drugs = [drug for sublist in disease['Treating drugs'] for drug in sublist]
-            print(f"Treating Drugs: {', '.join(treating_drugs) if treating_drugs else 'No treating drugs available'}")
-
-            # Flatten Palliating Drugs list if it's a list of lists
-            palliating_drugs = [drug for sublist in disease['Palliating drugs'] for drug in sublist]
-            print(f"Palliating Drugs: {', '.join(palliating_drugs) if palliating_drugs else 'No palliative drugs available'}")
-            
-            # Print Genes
-            genes = disease.get('Genes', [])
-            if genes:
-                print(f"Genes: {', '.join(genes)}")
-            else:
-                print("Genes: No genes data available")
-            
-            # Print Anatomy
-            anatomy = disease.get('Anatomy', [])
-            if anatomy:
-                print(f"Anatomy: {', '.join(anatomy)}")
-            else:
-                print("Anatomy: No anatomical data available")
-        
-        else:
-            print("No results found for the given disease ID.")
 
     # def matchEdgesByTarget(self):
      
