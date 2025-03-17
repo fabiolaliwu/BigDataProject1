@@ -56,18 +56,18 @@ class MongoDB:
             },
             {
                 "$lookup": {
-                    "from": "nodes",  # The collection we're joining with
-                    "localField": "target",  # The field in the edges collection
-                    "foreignField": "_id",  # The field in the nodes collection
-                    "as": "target_node"  # The alias for the joined data
+                    "from": "nodes", 
+                    "localField": "target", 
+                    "foreignField": "_id", 
+                    "as": "target_node" 
                 }
             },
             {
                 "$lookup": {
-                    "from": "nodes",  # The collection we're joining with
-                    "localField": "source",  # The field in the edges collection
-                    "foreignField": "_id",  # The field in the nodes collection
-                    "as": "source_node"  # The alias for the joined data
+                    "from": "nodes",
+                    "localField": "source",  
+                    "foreignField": "_id", 
+                    "as": "source_node" 
                 }
             },
             {
@@ -80,31 +80,31 @@ class MongoDB:
         ]
         result = self.edges_collection.aggregate(pipeline)
 
-        treating_drug_sources = []
-        palliating_drug_sources = []
-        genes_target = []
-        anatomy_target = []
-        for item in result:
-            if item['metaedge'] == 'CtD' and item.get('source_name'):
-                treating_drug_sources.append(item['source_name'])
-            elif item['metaedge'] == 'CpD' and item.get('source_name'):
-                palliating_drug_sources.append(item['source_name'])
-            elif item['metaedge'] == 'DdG' and item.get('target_name'):
-                genes_target.append(item['target_name'])
-            elif item['metaedge'] == 'DlA' and item.get('target_name'):
-                anatomy_target.append(item['target_name'])
-
-        disease = self.nodes_collection.find_one({"_id": diseaseID})
-        disease_name = disease["name"]
-
-        # Print the results
-        print("=====Info=====")
-        print(f"ID: {diseaseID}")
-        print(f"Name: {disease_name}")
-        print(f"Treating Drugs: {', '.join(treating_drug_sources) if treating_drug_sources else 'No treating drugs available.'}")
-        print(f"Palliating Drugs: {', '.join(palliating_drug_sources) if palliating_drug_sources else 'No palliating drugs available.'}")
-        print(f"Genes: {', '.join(genes_target) if genes_target else 'No genes available.'}")
-        print(f"Anatomy: {', '.join(anatomy_target) if anatomy_target else 'No anatomy available.'}")
+        if result:
+            treating_drug_sources = []
+            palliating_drug_sources = []
+            genes_target = []
+            anatomy_target = []
+            for item in result:
+                if item['metaedge'] == 'CtD' and item.get('source_name'):
+                    treating_drug_sources.append(item['source_name'])
+                elif item['metaedge'] == 'CpD' and item.get('source_name'):
+                    palliating_drug_sources.append(item['source_name'])
+                elif item['metaedge'] == 'DdG' and item.get('target_name'):
+                    genes_target.append(item['target_name'])
+                elif item['metaedge'] == 'DlA' and item.get('target_name'):
+                    anatomy_target.append(item['target_name'])
+            disease = self.nodes_collection.find_one({"_id": diseaseID})
+            disease_name = disease["name"]
+            print("\n----- RESULTS -----")
+            print(f"ID: {diseaseID}")
+            print(f"Disease: {disease_name}")
+            print(f"Treating Drugs: {', '.join(treating_drug_sources) if treating_drug_sources else 'No treating drugs available.'}")
+            print(f"Palliating Drugs: {', '.join(palliating_drug_sources) if palliating_drug_sources else 'No palliating drugs available.'}")
+            print(f"Genes: {', '.join(genes_target) if genes_target else 'No genes available.'}")
+            print(f"Locations: {', '.join(anatomy_target) if anatomy_target else 'No anatomy available.'}")
+        else:
+                print(f"No disease found with ID: {diseaseID}")
 
         # info = [
         #     {"$match": {"_id": diseaseID}}, 
@@ -756,6 +756,9 @@ class MongoDB:
                 if (ctD_edge['source'], ctD_edge['target']) not in existing_ctd_set:
                     print(f"{ctD_edge}")
                     counter += 1
+
+            print("\n----- RESULTS -----")
+            print(f"Found {counter} potential new treatment compounds:")
             print(f"Total matching CtD edges: {matching_edges_count}")
             print(f"Found {len(CtDEdges)} CtD edges in the database.")
             print(f"There are {counter} missing edges.")

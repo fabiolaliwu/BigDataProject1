@@ -1,20 +1,37 @@
 from MongoDB import MongoDB
 # from Neo4J import Neo4J
+def display_menu():
+    print("\n===== HetioNet Database Client =====")
+    print("1. Get disease information (Query 1)")
+    print("2. Find potential new drug-disease relationships (Query 2)")
+    print("3. Exit")
+    return input("Enter your choice (1-3): ")
 
-if __name__ == "__main__":
-    # print("\n\n======MAIN MENU===== \nChoose one of the following options: \n")
-    # print("1. Get disease Information \n2. Find missing CtD edges \n3. EXIT\n")
-    # option = input()
-    # if option != 1 or 2 or 3:
-    #     print("inavlid option")
-    
-    # print("You chose option ", option)
-    
-    testingMongoDB = MongoDB()
-    # testingMongoDB.cleanDatabase()
-    # testingMongoDB.loadNodes()
-    # testingMongoDB.loadEdges()
-    testingMongoDB.diseaseInfo("Disease::DOID:0050156")
+#format list results for query 1
+def format_list_result(items):
+    if items and len(items) > 0:
+        return ', '.join(items)
+    else:
+        return 'None'
+
+if  __name__ == "__main__":
+    print("Welcome to HetioNet Database Client")
+    while True:
+        choice = display_menu()
+        mongo = MongoDB()
+        
+        if choice == '1':
+            disease_id = input("Enter disease ID (ex: Disease::DOID:263): ")
+            mongo.diseaseInfo(disease_id)   
+        elif choice == '2':
+            mongo.missingEdges()
+        elif choice == '3':
+            break  
+        else:
+            print("Invalid choice. Try Again")
+    print("Connection closed")
+
+
 
     # testingMongoDB.diseaseInfo("Disease::DOID:4989")
     #already in DataBase so do not mess up by uncommenting it
