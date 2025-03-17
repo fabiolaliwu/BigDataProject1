@@ -752,6 +752,6 @@ class MongoDB:
             print(f"Found {counter} potential new treatment compounds:")
             print(f"Total matching CtD edges: {matching_edges_count}")
             print(f"Found {len(CtDEdges)} CtD edges in the database.")
-            print(f"There are {counter} missing edges.")
+        
         else:
             print("No matching edges found.")
