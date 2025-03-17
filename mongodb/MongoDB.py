@@ -33,15 +33,6 @@ class MongoDB:
         self.edges_collection.insert_many(edges_data)
         print(f"{len(edges_data)} edges loaded into MongoDB")
 
-    def get_node_names(self, ids):
-        """ Helper function to fetch the names from nodes collection based on ids """
-        names = []
-        for node_id in ids:
-            node = self.nodes_collection.find_one({"_id": node_id})
-            if node and "name" in node:
-                names.append(node["name"])
-        return names
-
     def diseaseInfo(self, diseaseID):
         pipeline = [
             {
@@ -49,7 +40,7 @@ class MongoDB:
                     "$or": [
                         {"metaedge": "CtD", "target": diseaseID},
                         {"metaedge": "CpD", "target": diseaseID},
-                        {"metaedge": "DdG", "source": diseaseID},
+                        {"metaedge": "DaG", "source": diseaseID},
                         {"metaedge": "DlA", "source": diseaseID}
                     ]
                 }
