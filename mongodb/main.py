@@ -1,11 +1,6 @@
 from MongoDB import MongoDB
-# from Neo4J import Neo4J
-def display_menu():
-    print("\n===== HetioNet Database Client =====")
-    print("1. Get disease information (Query 1)")
-    print("2. Find potential new drug-disease relationships (Query 2)")
-    print("3. Exit")
-    return input("Enter your choice (1-3): ")
+import tkinter as tk
+from tkinter import simpledialog, scrolledtext
 
 #format list results for query 1
 def format_list_result(items):
@@ -14,51 +9,88 @@ def format_list_result(items):
     else:
         return 'None'
 
-if  __name__ == "__main__":
-    print("Welcome to HetioNet Database Client")
-    while True:
-        choice = display_menu()
-        mongo = MongoDB()
+class HetioNetGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("HetioNet Database Client")
+        self.root.geometry("600x500")
+        self.mongo = MongoDB()
         
-        if choice == '1':
-            disease_id = input("Enter disease ID (ex: Disease::DOID:263): ")
-            mongo.diseaseInfo(disease_id)   
-        elif choice == '2':
-            mongo.missingEdges()
-        elif choice == '3':
-            break  
-        else:
-            print("Invalid choice. Try Again")
-    print("Connection closed")
-
-
-
-    # testingMongoDB.diseaseInfo("Disease::DOID:4989")
-    #already in DataBase so do not mess up by uncommenting it
-    #print("Loading nodes into MongoDB")
-    # testingMongoDB.cleanDatabase()  
-    # testingMongoDB.loadNodes()
-    # testingMongoDB.loadEdges()
-    # mongo_client = testingMongoDB.client
-    # mongo_db = mongo_client['hetio_database']
-    # nodes_collection = mongo_db['nodes'] 
-
-    # disease_id = "Disease::DOID:1094"
-    # testingMongoDB.diseaseInfo(disease_id)
-
-    # testingMongoDB.diseaseInfo("Disease::DOID:0050156")
-    #testingMongoDB.findMatchingEdges()
-    # testingMongoDB.findMatchingEdges()
-
-    # testingMongoDB.checkEdges()
-    # testingMongoDB.checkAnatomyEdges()
-    # testingMongoDB.testDatabase()
-
-
-    # testingNeo4J = Neo4J()
-    # testingNeo4J.cleanDatabase()
+        #title
+        title_label = tk.Label(root, text="HetioNet Database Client", font=("Arial", 14))
+        title_label.pack(pady=10)
+        
+        #menu buttons frame
+        menu_frame = tk.Frame(root)
+        menu_frame.pack(pady=10)
+        
+        #menu buttons
+        btn1 = tk.Button(menu_frame, text="1. Get disease information (Query 1)", 
+                         width=40, command=self.choice_1)
+        btn1.pack(pady=5)
+        
+        btn2 = tk.Button(menu_frame, text="2. Find potential new drug-disease relationships (Query 2)", 
+                         width=40, command=self.choice_2)
+        btn2.pack(pady=5)
+        
+        #results display
+        results_label = tk.Label(root, text="Results:")
+        results_label.pack(anchor=tk.W, padx=10)
+        
+        self.output_text = scrolledtext.ScrolledText(root, height=20, width=70)
+        self.output_text.pack(padx=10, pady=5, fill=tk.BOTH, expand=True)
+        
+        #window close event
+        self.root.protocol("WM_DELETE_WINDOW", self.close_window)
     
+    def choice_1(self):
+        #prompt for disease ID
+        disease_id = simpledialog.askstring("Input", "Enter disease ID (ex: Disease::DOID:263):", 
+                                           initialvalue="Disease::DOID:263")
+        if not disease_id:
+            return
+        
+        #clear output text
+        self.output_text.delete(1.0, tk.END)
+        
+        #execute query and get results
+        result = self.mongo.diseaseInfo(disease_id)
+        
+        if result:
+            self.output_text.insert(tk.END, f"Disease: {result['Disease']}\n")
+            self.output_text.insert(tk.END, f"Drugs: {format_list_result(result['Drugs'])}\n")
+            self.output_text.insert(tk.END, f"Genes: {format_list_result(result['Genes'])}\n")
+            self.output_text.insert(tk.END, f"Locations: {format_list_result(result['Locations'])}\n")
+        else:
+            self.output_text.insert(tk.END, f"No disease found with ID: {disease_id}")
+    
+    def choice_2(self):
+        #clear output text
+        self.output_text.delete(1.0, tk.END)
+        
+        #show "Processing..." message
+        self.output_text.insert(tk.END, "Processing query... This may take a moment.\n")
+        self.root.update_idletasks()
+        
+        #execute query and get results
+        results = self.mongo.missingEdges()
+        
+        #clear output and display results
+        self.output_text.delete(1.0, tk.END)
+        self.output_text.insert(tk.END, f"Found {len(results)} potential new treatment compounds:\n")
+        
+        #display each compound in the same format as Neo4j
+        counter = 1
+        for result in results:
+            self.output_text.insert(tk.END, f"{counter}. {result['compound_name']}\n")
+            counter += 1
+    
+    def close_window(self):
+        #close connection
+        print("Connection closed")
+        self.root.destroy()
 
-
-
-
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = HetioNetGUI(root)
+    root.mainloop()

@@ -45,19 +45,35 @@ edge_count = result.single()["count"]
 print("Importing edges in batches (may take longer)...")
 edges_start_time = time.time()  #start timing edge import
 
-batch_size = 25000 #batch size
+batch_size = 50000 #batch size
 skip = 0
 
+#processing edges in batches
 while skip < edge_count:
-    #processes 25,000 edges at a time: finds the source and target nodes and creates relationships between them
-    edge_query = f"""
+    #for DaG edges (flipping direction)
+    dag_query = f"""
     LOAD CSV WITH HEADERS FROM 'file:///edges.tsv' AS row FIELDTERMINATOR '\t'
     SKIP {skip} LIMIT {batch_size}
     MATCH (source:Node {{id: row.source}})
     MATCH (target:Node {{id: row.target}})
+    WHERE row.metaedge = 'DaG'
+    CREATE (target)-[r:RELATES {{type: row.metaedge}}]->(source)
+    """
+
+    #for all other edge types
+    other_query = f"""
+    LOAD CSV WITH HEADERS FROM 'file:///edges.tsv' AS row FIELDTERMINATOR '\t'
+    SKIP {skip} LIMIT {batch_size}
+    MATCH (source:Node {{id: row.source}})
+    MATCH (target:Node {{id: row.target}})
+    WHERE row.metaedge <> 'DaG'
     CREATE (source)-[r:RELATES {{type: row.metaedge}}]->(target)
     """
-    session.run(edge_query, database_="neo4j", config={"transaction.timeout": 600})
+    
+    #run both queries for this batch
+    session.run(dag_query, database_="neo4j", config={"transaction.timeout": 600})
+    session.run(other_query, database_="neo4j", config={"transaction.timeout": 600})
+    
     skip += batch_size
 
 edges_elapsed = time.time() - edges_start_time  #calculate elapsed time
