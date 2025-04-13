@@ -54,10 +54,9 @@ class Queries:
                 filteredDiseasesCount[x] += 1
             else:
                 filteredDiseasesCount[x] = 1
-        # print(filteredDiseasesCount)
+       
         # sort the dictionary by value in descending order
         sortedFilteredDiseasesCount = sorted(filteredDiseasesCount.items(), key=lambda x: x[1], reverse=True)
-        # print(sortedFilteredDiseasesCount)
         print(f"\nQuery 2: Top 5 diseases with less than {n} drugs associated")
         print("-" * 60)
         for drug_count, disease_count in sortedFilteredDiseasesCount[:5]:
