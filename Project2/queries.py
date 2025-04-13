@@ -5,7 +5,7 @@ class Queries:
         self.nodes = pd.read_csv('data/nodes.tsv', sep='\t')
         self.edges = pd.read_csv('data/edges.tsv', sep='\t')   
  
-    def query1(self):
+    def query(self, queryNumber):
         # filter all the compounds
         compounds = self.edges[self.edges['source'].str.contains('Compound')]
         genesAssociated = compounds[compounds['target'].str.contains('Gene')]
@@ -24,12 +24,20 @@ class Queries:
                 diseaseCount[x] += 1
             else:
                 diseaseCount[x] = 1
-        print(f"\n{'Compound ID':<20}{'Genes':<10}{'Diseases':<10}")
-        print("-" * 40)
-        for compound_id, gene_count in sortedGenesCount[:5]:
-            disease_count = diseaseCount.get(compound_id, 0)
-            print(f"{compound_id:<20}{gene_count:<10}{disease_count:<10}")
-    
+        if queryNumber == 1:
+            print(f"\nQuery 1: Top 5 compounds with most genes associated, and their associated diseases")
+            print(f"{'Compound ID':<20}{'Genes':<10}{'Diseases':<10}")
+            print("-" * 40)
+            for compound_id, gene_count in sortedGenesCount[:5]:
+                disease_count = diseaseCount.get(compound_id, 0)
+                print(f"{compound_id:<20}{gene_count:<10}{disease_count:<10}")
+        elif queryNumber == 3:
+            print(f"\nQuery 3: Names of top 5 compounds with most genes associated")
+            print("-" * 50)
+            for compound_id, gene_count in sortedGenesCount[:5]:
+                # Get the name of the compound from the nodes dataframe
+                print(f"{self.nodes[self.nodes['id'] == compound_id]['name'].values[0]} -> {gene_count}")
+
     def query2(self, n):
         # filter all the compounds
         drugsWithDisease = self.edges[self.edges['source'].str.contains('Compound') & self.edges['target'].str.contains('Disease')]
@@ -62,7 +70,7 @@ class Queries:
         for drug_count, disease_count in sortedFilteredDiseasesCount[:5]:
             print(f"drug{drug_count} -> {disease_count} diseases")
 
-    def query3(self):
-       print("hello")
+
+        
         
 

@@ -3,7 +3,9 @@ from queries import Queries
 
 #create an instamce for the class and call the query1 function
 q = Queries()
-q.query1()
+q.query(1)
 q.query2(20)
+q.query(3)
+
 
     
