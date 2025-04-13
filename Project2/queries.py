@@ -43,10 +43,7 @@ class Queries:
                 diseaseCount[x] = 1
         # print(len(diseaseCount))
         #keep the diseases with less than n drugs
-        filteredDiseases = {k: v for k, v in diseaseCount.items() if v < n}
-        # print(len(filteredDiseases))
-        # print(filteredDiseases)
-        #         
+        filteredDiseases = {k: v for k, v in diseaseCount.items() if v < n}        
         # map<
         # key: value of filteredDiseases, which is number of drugs associated with each disease,
         # value: count
