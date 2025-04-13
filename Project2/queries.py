@@ -25,14 +25,12 @@ class Queries:
             else:
                 genesCount[x] = 1
         sortedGenesCount = sorted(genesCount.items(), key=lambda x: x[1], reverse=True)
-
         diseaseCount = {}
         for x in diseaseAssociated['source']:
             if x in diseaseCount:
                 diseaseCount[x] += 1
             else:
                 diseaseCount[x] = 1
-
         print(f"\n{'Compound ID':<20}{'Genes':<10}{'Diseases':<10}")
         print("-" * 40)
         for compound_id, gene_count in sortedGenesCount[:5]:
@@ -41,4 +39,42 @@ class Queries:
     
     def query2(self, n):
         # filter all the compounds
-        compounds = self.edges[self.edges['source'].str.contains('Compound')]
+        drugsWithDisease = self.edges[self.edges['source'].str.contains('Compound') & self.edges['target'].str.contains('Disease')]
+     
+        # print(drugsWithDisease)
+        # map the <disease, countOfDrugsAssociatedWithDisease> pairs to a dictionary
+        diseaseCount = {}
+        for x in drugsWithDisease['target']:
+            if x in diseaseCount:
+                diseaseCount[x] += 1
+            else:
+                diseaseCount[x] = 1
+        # print(len(diseaseCount))
+        #keep the diseases with less than n drugs
+        filteredDiseases = {k: v for k, v in diseaseCount.items() if v < n}
+        # print(len(filteredDiseases))
+        # print(filteredDiseases)
+        #         
+        # map<
+        # key: value of filteredDiseases, which is number of drugs associated with each disease,
+        # value: count
+        # > to a dictionary
+        filteredDiseasesCount = {}
+        for x in filteredDiseases.values():
+            if x in filteredDiseasesCount:
+                filteredDiseasesCount[x] += 1
+            else:
+                filteredDiseasesCount[x] = 1
+
+        # print(filteredDiseasesCount)
+        # sort the dictionary by value in descending order
+        sortedFilteredDiseasesCount = sorted(filteredDiseasesCount.items(), key=lambda x: x[1], reverse=True)
+        # print(sortedFilteredDiseasesCount)
+        print(f"\nQuery 2: Top 5 diseases with less than {n} drugs associated")
+        print("-" * 60)
+        for drug_count, disease_count in sortedFilteredDiseasesCount[:5]:
+            print(f"drug{drug_count} -> {disease_count} diseases")
+
+
+        
+
