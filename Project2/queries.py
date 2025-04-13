@@ -40,7 +40,6 @@ class Queries:
     def query2(self, n):
         # filter all the compounds
         drugsWithDisease = self.edges[self.edges['source'].str.contains('Compound') & self.edges['target'].str.contains('Disease')]
-     
         # print(drugsWithDisease)
         # map the <disease, countOfDrugsAssociatedWithDisease> pairs to a dictionary
         diseaseCount = {}
@@ -65,7 +64,6 @@ class Queries:
                 filteredDiseasesCount[x] += 1
             else:
                 filteredDiseasesCount[x] = 1
-
         # print(filteredDiseasesCount)
         # sort the dictionary by value in descending order
         sortedFilteredDiseasesCount = sorted(filteredDiseasesCount.items(), key=lambda x: x[1], reverse=True)
@@ -75,6 +73,7 @@ class Queries:
         for drug_count, disease_count in sortedFilteredDiseasesCount[:5]:
             print(f"drug{drug_count} -> {disease_count} diseases")
 
-
+    def query3(self):
+       print("hello")
         
 
