@@ -3,11 +3,7 @@ import pandas as pd
 class Queries:
     def __init__(self):
         self.nodes = pd.read_csv('data/nodes.tsv', sep='\t')
-        #print("Node columns:", self.nodes.columns.tolist())
-        # print("Node rows:", self.nodes.shape[0])
-        self.edges = pd.read_csv('data/edges.tsv', sep='\t')
-        # print("Node rows:", self.edges.shape[0])
-        
+        self.edges = pd.read_csv('data/edges.tsv', sep='\t')   
  
     def query1(self):
         # filter all the compounds
