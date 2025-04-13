@@ -8,11 +8,8 @@ class Queries:
     def query1(self):
         # filter all the compounds
         compounds = self.edges[self.edges['source'].str.contains('Compound')]
-        # print("Compounds:", compounds)
         genesAssociated = compounds[compounds['target'].str.contains('Gene')]
-        # print("Genes Associated:", genesAssociated)
         diseaseAssociated = compounds[compounds['target'].str.contains('Disease')]
-        # print(diseaseAssociated)
         # # map the <compound, count> pairs to a dictionary
         genesCount = {}
         for x in genesAssociated['source']:
