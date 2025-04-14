@@ -10,6 +10,7 @@ For mongodb:
 For neo4j:
 ```python hetionet_neo4j_client.py ``
 
+
 #### Query 1: 
 Given a disease id, it will print out the name, related drugs, genes, and anatomy.
 
