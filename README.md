@@ -3,8 +3,10 @@
 ## Project 1
 The HetioNet is a tool to understand the complex relationships between diseases, genes, compounds, and anatomy. This project focuses on building a database to efficiently handle queries related to disease location, genes, and treatment by utilizing MongoDB and Neo4J NoSQL data stores.
 You can either cd to the mongodb or neo4j folder in order to run the query
+
 For mongodb:
 ```python main.py```
+
 For neo4j:
 ```python hetionet_neo4j_client.py ```
 
