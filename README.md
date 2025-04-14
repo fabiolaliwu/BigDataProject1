@@ -2,6 +2,9 @@
 
 ## Project 1
 
+
+
+## Project 2
 ### Query 1:
 - Computes the number of genes and diseases associated with each drug in `nodes.tsv`, and outputs the top 5 drugs with the most genes in descending order.
 
