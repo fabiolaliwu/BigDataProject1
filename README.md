@@ -1,13 +1,12 @@
-**Big Data Technology**
+# Big Data Technology
 
-Project1
+## Project 1
 
+### Query 1:
+- Computes the number of genes and diseases associated with each drug in `nodes.tsv`, and outputs the top 5 drugs with the most genes in descending order.
 
+### Query 2:
+- Computes the number of diseases associated with up to **n** drugs, and outputs the top 5 diseases in descending order.
 
-Project2
-- Query 1: It computes the number of genes and diseases associated with each drug in nodes.tsv, and will output the top 5 number of genes in descending order.
-- Query 2: It computes the number of diseases associated
-with up to n drugs and it outputs the top
-5 number of diseases in a descending order.
-- Query 3: Gets the name of drugs that have the top 5
-number of genes
+### Query 3:
+- Retrieves the names of drugs with the top 5 highest gene associations.
