@@ -5,9 +5,9 @@ Project1
 
 
 Project2
-- Query 1: it computes the number of genes and diseases associated with each drug in nodes.tsv, and will output the top 5 number of genes in descending order.
-- Query 2: Compute the number of diseases associated
-with 1, 2, 3, ..., n drugs. Output results with the top
+- Query 1: It computes the number of genes and diseases associated with each drug in nodes.tsv, and will output the top 5 number of genes in descending order.
+- Query 2: It computes the number of diseases associated
+with up to n drugs and it outputs the top
 5 number of diseases in a descending order.
-- Q3: Get the name of drugs that have the top 5
-number of genes. Out put the results.
+- Query 3: Gets the name of drugs that have the top 5
+number of genes
