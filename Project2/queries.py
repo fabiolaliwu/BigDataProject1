@@ -1,4 +1,7 @@
 import pandas as pd
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, when, count
+from pyspark.sql.functions import desc
 
 class Queries:
     def __init__(self):
