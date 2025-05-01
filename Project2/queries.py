@@ -1,79 +1,45 @@
-import pandas as pd
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, when, count
-from pyspark.sql.functions import desc
+from pyspark.sql.functions import col, count, desc
 
 class Queries:
     def __init__(self):
-        self.nodes = pd.read_csv('data/nodes.tsv', sep='\t')
-        self.edges = pd.read_csv('data/edges.tsv', sep='\t')   
- 
+        self.spark = SparkSession.builder.appName("CompoundQueries").getOrCreate()
+        self.nodes = self.spark.read.csv('data/nodes.tsv', sep='\t', header=True, inferSchema=True)
+        self.edges = self.spark.read.csv('data/edges.tsv', sep='\t', header=True, inferSchema=True)
+
     def query(self, queryNumber):
-        # filter all the compounds
-        compounds = self.edges[self.edges['source'].str.contains('Compound')]
-        genesAssociated = compounds[compounds['target'].str.contains('Gene')]
-        diseaseAssociated = compounds[compounds['target'].str.contains('Disease')]
-        # # map the <compound, count> pairs to a dictionary
-        genesCount = {}
-        for x in genesAssociated['source']:
-            if x in genesCount:
-                genesCount[x] += 1
-            else:
-                genesCount[x] = 1
-        sortedGenesCount = sorted(genesCount.items(), key=lambda x: x[1], reverse=True)
-        diseaseCount = {}
-        for x in diseaseAssociated['source']:
-            if x in diseaseCount:
-                diseaseCount[x] += 1
-            else:
-                diseaseCount[x] = 1
+        compounds = self.edges.filter(col('source').contains('Compound'))
+        genesAssociated = compounds.filter(col('target').contains('Gene'))
+        diseaseAssociated = compounds.filter(col('target').contains('Disease'))
+        genesCountDF = genesAssociated.groupBy('source').agg(count('*').alias('gene_count'))
+        diseaseCountDF = diseaseAssociated.groupBy('source').agg(count('*').alias('disease_count'))
+
+        joinedCounts = genesCountDF.join(diseaseCountDF, on='source', how='left').fillna(0)
+        sortedGenes = joinedCounts.orderBy(desc('gene_count'))
         if queryNumber == 1:
             print(f"\n\n\n\n\nQuery 1: Top 5 compounds with most genes associated, and their associated diseases")
             print(f"{'Compound ID':<20}{'Genes':<10}{'Diseases':<10}")
             print("-" * 40)
-            for compound_id, gene_count in sortedGenesCount[:5]:
-                disease_count = diseaseCount.get(compound_id, 0)
-                print(f"{compound_id:<20}{gene_count:<10}{disease_count:<10}")
+            top5 = sortedGenes.limit(5).collect()
+            for row in top5:
+                print(f"{row['source']:<20}{row['gene_count']:<10}{int(row['disease_count']):<10}")
         elif queryNumber == 3:
             print(f"\n\n\n\n\nQuery 3: Names of top 5 compounds with most genes associated")
             print("-" * 60)
-            for compound_id, gene_count in sortedGenesCount[:5]:
-                # Get the name of the compound from the nodes dataframe
-                print(f"{self.nodes[self.nodes['id'] == compound_id]['name'].values[0]} -> {gene_count}")
+            top5 = sortedGenes.limit(5)
+            top5WithNames = top5.join(self.nodes, top5.source == self.nodes.id, how='left')
+            for row in top5WithNames.select('name', 'gene_count').collect():
+                print(f"{row['name']} -> {row['gene_count']}")
 
     def query2(self, n):
-        # filter all the compounds
-        drugsWithDisease = self.edges[self.edges['source'].str.contains('Compound') & self.edges['target'].str.contains('Disease')]
-        # print(drugsWithDisease)
-        # map the <disease, countOfDrugsAssociatedWithDisease> pairs to a dictionary
-        diseaseCount = {}
-        for x in drugsWithDisease['target']:
-            if x in diseaseCount:
-                diseaseCount[x] += 1
-            else:
-                diseaseCount[x] = 1
-        # print(len(diseaseCount))
-        #keep the diseases with less than n drugs
-        filteredDiseases = {k: v for k, v in diseaseCount.items() if v < n}        
-        # map<
-        # key: value of filteredDiseases, which is number of drugs associated with each disease,
-        # value: count
-        # > to a dictionary
-        filteredDiseasesCount = {}
-        for x in filteredDiseases.values():
-            if x in filteredDiseasesCount:
-                filteredDiseasesCount[x] += 1
-            else:
-                filteredDiseasesCount[x] = 1
-       
-        # sort the dictionary by value in descending order
-        sortedFilteredDiseasesCount = sorted(filteredDiseasesCount.items(), key=lambda x: x[1], reverse=True)
+        drugsWithDisease = self.edges.filter(
+            col('source').contains('Compound') & col('target').contains('Disease')
+        )
+        diseaseCounts = drugsWithDisease.groupBy('target').agg(count('source').alias('drug_count'))
+        filtered = diseaseCounts.filter(col('drug_count') < n)
+        distribution = filtered.groupBy('drug_count').agg(count('*').alias('disease_count'))
+        sortedDistribution = distribution.orderBy(desc('disease_count'))
         print(f"\n\n\n\n\nQuery 2: Top 5 diseases with less than {n} drugs associated")
         print("-" * 60)
-        for drug_count, disease_count in sortedFilteredDiseasesCount[:5]:
-            print(f"{drug_count} drugs -> {disease_count} diseases")
-
-
-        
-        
-
+        for row in sortedDistribution.limit(5).collect():
+            print(f"{row['drug_count']} drugs -> {row['disease_count']} diseases")
