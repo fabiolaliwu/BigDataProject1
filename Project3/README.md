@@ -1,4 +1,4 @@
-### Cancer Diagnosis Using Machine Learning
+# Cancer Diagnosis Using Machine Learning
 
 ## Objective:
   Develop and evaluate machine learning models to predict whether a tumor is benign (B) or malignant (M) using a dataset of clinical variables.
